@@ -11,7 +11,11 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  cv_bridge
+  image_transport
 )
+
+find_package(OpenCV)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -118,6 +122,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -149,6 +154,10 @@ include_directories(
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
+
+add_executable(vid2img_pub src/vid2img_pub.cpp)
+target_link_libraries(vid2img_pub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+add_dependencies(vid2img_pub ${catkin_EXPORTED_TARGETS} vid2img_pub)
 
 #############
 ## Install ##
