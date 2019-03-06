@@ -4,6 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <numeric>
 #include <iostream>
+#include <chrono>
 
 using namespace cv;
 using namespace std;
@@ -11,8 +12,10 @@ using namespace std;
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
   cv_bridge::CvImageConstPtr cv_ptr;
+  static vector<chrono::microseconds> times;
   try
   {
+    auto start = chrono::high_resolution_clock::now();
     cv_ptr = cv_bridge::toCvShare(msg, "bgr8");
     // imshow("view", cv_ptr->image);
     Mat gray, blurr, edge, draw;
@@ -24,7 +27,6 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     // imshow("canny",draw);
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
-
 
     findContours(draw,contours,hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
@@ -41,9 +43,20 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
             drawContours(cv_ptr->image, contours, i, Scalar(0, 255, 0),3); // fill GREEN
         }
     }
-
+    auto stop = chrono::high_resolution_clock::now();
     imshow("overlay", cv_ptr->image);
+    auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+    if (times.size() <= 100)
+      times.push_back(duration);
 
+    if (times.size() == 100){
+      chrono::microseconds sum;
+      for (auto &n : times)
+        sum += n;
+      auto avg = sum/times.size();
+      cout << "Average computation time taken by function over 100 calls: "
+           << duration.count() << " microseconds" << endl;
+    }
     waitKey(3);
   }
   catch (cv_bridge::Exception& e)
