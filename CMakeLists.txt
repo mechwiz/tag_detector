@@ -159,6 +159,10 @@ add_executable(vid2img_pub src/vid2img_pub.cpp)
 target_link_libraries(vid2img_pub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 add_dependencies(vid2img_pub ${catkin_EXPORTED_TARGETS} vid2img_pub)
 
+add_executable(tag_detector src/tag_detector.cpp)
+target_link_libraries(tag_detector ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+add_dependencies(tag_detector ${catkin_EXPORTED_TARGETS} tag_detector)
+
 #############
 ## Install ##
 #############
