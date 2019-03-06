@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="tag_detector" type="vid2img_pub" name="vid2img_pub" output="screen" />
+    <node pkg="tag_detector" type="tag_detector" name="tag_detector" output="screen" />
+</launch>
