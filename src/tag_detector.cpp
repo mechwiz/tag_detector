@@ -20,7 +20,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     blur(gray,blurr,Size(3,3));
     Canny( blurr, edge, 50, 150, 3);
     dilate(edge,edge,Mat(),Point(-1,-1));
-    edge.convertTo(draw, -1);
+    edge.convertTo(draw, CV_8U);
     // imshow("canny",draw);
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
