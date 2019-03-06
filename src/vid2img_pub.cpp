@@ -33,7 +33,7 @@ int main(int argc, char** argv)
       msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
       // cv::imshow(OPENCV_WINDOW, frame);
       pub.publish(msg);
-      cv::waitKey(1);
+      // cv::waitKey(1);
     } else {
       // cv::destroyAllWindows();
       break;
