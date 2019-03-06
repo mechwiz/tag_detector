@@ -4,7 +4,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 
-static const std::string OPENCV_WINDOW = "Image window";
+// static const std::string OPENCV_WINDOW = "Image window";
 
 int main(int argc, char** argv)
 {
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
   cv::Mat frame;
   sensor_msgs::ImagePtr msg;
 
-  cv::namedWindow(OPENCV_WINDOW);
+  // cv::namedWindow(OPENCV_WINDOW);
   ros::Rate loop_rate(30);
   while (nh.ok()) {
     cap >> frame;
@@ -31,11 +31,11 @@ int main(int argc, char** argv)
     if(!frame.empty()) {
       cv::resize(frame, frame, cv::Size(640, 480), 0, 0, CV_INTER_CUBIC);
       msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
-      cv::imshow(OPENCV_WINDOW, frame);
+      // cv::imshow(OPENCV_WINDOW, frame);
       pub.publish(msg);
       cv::waitKey(1);
     } else {
-      cv::destroyAllWindows();
+      // cv::destroyAllWindows();
       break;
     }
 
