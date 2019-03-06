@@ -55,7 +55,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
         sum += n;
       auto avg = sum/times.size();
       cout << "Average computation time taken by function over 100 calls: "
-           << duration.count() << " microseconds" << endl;
+           << avg.count() << " microseconds" << endl;
     }
     waitKey(3);
   }
