@@ -18,10 +18,9 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     auto start = chrono::high_resolution_clock::now();
     cv_ptr = cv_bridge::toCvShare(msg, "bgr8");
     // imshow("view", cv_ptr->image);
-    Mat gray, blurr, edge, draw;
+    Mat gray, edge, draw;
     cvtColor(cv_ptr->image, gray, CV_BGR2GRAY);
-    blur(gray,blurr,Size(3,3));
-    Canny( blurr, edge, 50, 150, 3);
+    Canny( gray, edge, 50, 150, 3);
     dilate(edge,edge,Mat(),Point(-1,-1));
     edge.convertTo(draw, CV_8U);
     // imshow("canny",draw);
@@ -54,8 +53,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
       for (auto &n : times)
         sum += n;
       auto avg = sum/times.size();
-      cout << "Average computation time taken by function over 100 calls: "
-           << avg.count() << " microseconds" << endl;
+      ROS_INFO("Average computation time taken by function over 100 calls: %ld microseconds",avg.count());
     }
     waitKey(3);
   }
