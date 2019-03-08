@@ -5,15 +5,18 @@
 #include <numeric>
 #include <iostream>
 #include <chrono>
+#include "tag_detector/WindowSize.h"
 
 using namespace cv;
 using namespace std;
 
-int fft(Mat &I){
+static ros::ServiceClient client;
+
+vector<Mat> fft(Mat &I,int i_row, int i_col){
 //! [expand]
     Mat padded;                            //expand input image to optimal size
-    int m = getOptimalDFTSize( I.rows );
-    int n = getOptimalDFTSize( I.cols ); // on the border add zero values
+    int m = getOptimalDFTSize( i_row );
+    int n = getOptimalDFTSize( i_col ); // on the border add zero values
     copyMakeBorder(I, padded, 0, m - I.rows, 0, n - I.cols, BORDER_CONSTANT, Scalar::all(0));
 //! [expand]
 
@@ -34,6 +37,15 @@ int fft(Mat &I){
     magnitude(planes[0], planes[1], planes[0]);// planes[0] = magnitude
     Mat magI = planes[0];
 //! [magnitude]
+    vector<Mat> res = {complexI,magI};
+
+    return res;
+}
+
+int findSharpness(vector<Mat> &res){
+
+    Mat complexI = res.at(0);
+    Mat magI = res.at(1);
 
 //! [log]
     magI += Scalar::all(1);                    // switch to logarithmic scale
@@ -65,8 +77,8 @@ int fft(Mat &I){
 
 //! [normalize]
     normalize(magI, magI, 0, 1, NORM_MINMAX);  // Transform the matrix with float values into a
-                                               // viewable image form (float between values 0 and
-
+                                              // viewable image form (float between values 0 and 1)
+    // imshow("spectrum magnitude", magI);
 //! [threshold]
     threshold(magI,magI, 0.2, 1, THRESH_BINARY);
 
@@ -74,11 +86,24 @@ int fft(Mat &I){
 
 //! [sharpness]
     double sharpness = countNonZero(magI)/static_cast<double>(magI.rows*magI.cols);
-    // cout<<sharpness<<endl;
-
-    // imshow("spectrum magnitude", magI);
 
     return static_cast<int>(sharpness*100);
+}
+
+Mat deblur(Mat &complexI,int ksize, int i_row, int i_col){
+  Mat kw = getGaussianKernel(ksize,0);//
+  Mat k = kw*kw.t();
+  vector<Mat> res = fft(k,i_row,i_col);
+  Mat kernel = res.at(0);
+  Mat r;
+  // kernel.setTo(0.01,abs(kernel)<0.01);
+  divide(complexI,kernel,r);
+  Mat inverseTransform;
+  idft(r,inverseTransform,DFT_REAL_OUTPUT);
+  normalize(inverseTransform, inverseTransform, 0, 1, NORM_MINMAX);
+  // inverseTransform.convertTo(inverseTransform, CV_8U);
+  // imshow("Reconstructed", inverseTransform);
+  return inverseTransform;
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -86,14 +111,25 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   cv_bridge::CvImageConstPtr cv_ptr;
   static vector<chrono::microseconds> times;
   static vector<int> sharps;
+  static int num_rect = 35;
+  tag_detector::WindowSize srv;
+  srv.request.w = 0;
+
+
   try
   {
     cv_ptr = cv_bridge::toCvShare(msg, "bgr8");
     // imshow("view", cv_ptr->image);
-
     Mat gray, edge, draw;
     cvtColor(cv_ptr->image, gray, CV_BGR2GRAY);
-    int sharpness = fft(gray);
+    vector<Mat> res = fft(gray,gray.rows,gray.cols);
+    int sharpness = findSharpness(res);
+    // if (sharpness < 50 && num_rect < 35){
+    //   client.call(srv);
+    //   int winSize = static_cast<int>(srv.response.w);
+    //   Mat sharp_image = deblur(res.at(0),srv.response.w,gray.rows,gray.cols);
+    //   // imshow("deblur",sharp_image);
+    // }
     auto start = chrono::high_resolution_clock::now();
     Canny( gray, edge, 50, 150, 3);
     dilate(edge,edge,Mat(),Point(-1,-1));
@@ -108,13 +144,16 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     double ar;
 
     vector<Point> approxSquare;
+    num_rect = 0;
     for(size_t i = 0; i < contours.size(); i++){
         approxPolyDP(contours[i], approxSquare, arcLength(Mat(contours[i]), true)*0.02, true);
         if(approxSquare.size() == 4 && isContourConvex(approxSquare) && contourArea(approxSquare)>100){
           boundRect = boundingRect( approxSquare );
           ar = boundRect.width/static_cast<double>(boundRect.height);
-          if (ar>0.5 && ar <1.5)
+          if (ar>0.5 && ar <1.5){
             drawContours(cv_ptr->image, contours, i, Scalar(0, 255, 0),3); // fill GREEN
+            num_rect++;
+          }
         }
     }
     auto stop = chrono::high_resolution_clock::now();
@@ -147,6 +186,8 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
   image_transport::ImageTransport it(nh);
   image_transport::Subscriber sub = it.subscribe("image_raw", 1, imageCallback);
+  client = nh.serviceClient<tag_detector::WindowSize>("set_blur_window_size");
+
   ros::spin();
   destroyAllWindows();
 }
