@@ -7,7 +7,6 @@
 #include <iostream>
 
 using namespace cv;
-// static const std::string OPENCV_WINDOW = "Image window";
 static int window_w = 0;
 
 bool set_window_size(tag_detector::WindowSize::Request  &req,
@@ -56,7 +55,6 @@ int main(int argc, char** argv)
   Mat frame;
   sensor_msgs::ImagePtr msg;
 
-  // namedWindow(OPENCV_WINDOW);
   while (nh.ok()) {
     cap >> frame;
     // Check if grabbed frame is actually full with some content
@@ -69,7 +67,7 @@ int main(int argc, char** argv)
       }
       GaussianBlur(frame,blurr,kernel,0);
       msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", blurr).toImageMsg();
-      // imshow(OPENCV_WINDOW, blurr);
+      // imshow("blurred image", blurr);
       pub.publish(msg);
       // waitKey(1);
     } else {
