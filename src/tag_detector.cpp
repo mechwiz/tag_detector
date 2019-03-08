@@ -91,6 +91,7 @@ int findSharpness(vector<Mat> &res){
 }
 
 Mat deblur(Mat &complexI,int ksize, int i_row, int i_col){
+  // implemented based off of http://www.owlnet.rice.edu/~elec539/Projects99/BACH/proj2/inverse.html ---> still needs work
   Mat kw = getGaussianKernel(ksize,0);//
   Mat k = kw*kw.t();
   vector<Mat> res = fft(k,i_row,i_col);
@@ -106,6 +107,33 @@ Mat deblur(Mat &complexI,int ksize, int i_row, int i_col){
   return inverseTransform;
 }
 
+void correctIllumination(Mat &bgr_image, Mat &result){
+  // implemented from https://stackoverflow.com/questions/24341114/simple-illumination-correction-in-images-opencv-c
+  // still could be better implemented for this application
+
+  Mat lab_image;
+  cvtColor(bgr_image, lab_image, CV_BGR2Lab);
+
+  // Extract the L channel
+  vector<Mat> lab_planes(3);
+  split(lab_image, lab_planes);  // now we have the L image in lab_planes[0]
+
+  // apply the CLAHE algorithm to the L channel
+  Ptr<CLAHE> clahe = createCLAHE();
+  clahe->setClipLimit(4);
+  Mat dst;
+  clahe->apply(lab_planes[0], dst);
+
+  // Merge the the color planes back into an Lab image
+  dst.copyTo(lab_planes[0]);
+  merge(lab_planes, lab_image);
+
+ // convert back to RGB
+ Mat image_clahe;
+ cvtColor(lab_image, image_clahe, CV_Lab2BGR);
+ result = image_clahe;
+}
+
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
   cv_bridge::CvImageConstPtr cv_ptr;
@@ -115,13 +143,15 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
   tag_detector::WindowSize srv;
   srv.request.w = 0;
 
-
   try
   {
     cv_ptr = cv_bridge::toCvShare(msg, "bgr8");
     // imshow("view", cv_ptr->image);
-    Mat gray, edge, draw;
-    cvtColor(cv_ptr->image, gray, CV_BGR2GRAY);
+    Mat gray, dst, edge, draw;
+    dst = cv_ptr->image;
+    // correctIllumination(dst,dst);
+    // imshow("illum",dst);
+    cvtColor(dst, gray, CV_BGR2GRAY);
     vector<Mat> res = fft(gray,gray.rows,gray.cols);
     int sharpness = findSharpness(res);
     // if (sharpness < 50 && num_rect < 35){
