@@ -82,3 +82,12 @@ Nice Background                                                                 
 - Improving the illumination correction algorithm
 - Debugging the inverse filter for deblurring a blurred image
 - Restructure code to use classes
+
+#### Comments
+Several branches were used in the development of this package. As each feature was completed, its corresponding branch was merged back to the master after-which another branch was created to work on the next feature. This is because each step relies on the previous step for the most part.
+- **vid_load_pub** - implements node that takes input video and publishes sequential images.
+- **rect_detector** - implements another node that subscribes to the published images, detects the tags, and overlays their outlines on the oiginal image. Also measures computation time.
+- **gaussian_serv** - implements a server to set GaussingBlur window size.
+- **sharpness** - Evaluates sharpness of passed in images using FFT.
+- **deblur** - implements a deblurring filter for images that are considered to be blurry.
+- **bonus** - implements an illumination correction filter.
