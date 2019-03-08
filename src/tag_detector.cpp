@@ -11,8 +11,13 @@ using namespace cv;
 using namespace std;
 
 static ros::ServiceClient client;
+static bool deblur_corr;
+static bool illum_corr;
 
 vector<Mat> fft(Mat &I,int i_row, int i_col){
+  // function based off of opencv tutorial
+  // https://docs.opencv.org/3.4/d8/d01/tutorial_discrete_fourier_transform.html
+
 //! [expand]
     Mat padded;                            //expand input image to optimal size
     int m = getOptimalDFTSize( i_row );
@@ -43,6 +48,8 @@ vector<Mat> fft(Mat &I,int i_row, int i_col){
 }
 
 int findSharpness(vector<Mat> &res){
+    // function based off of opencv tutorial
+    // https://docs.opencv.org/3.4/d8/d01/tutorial_discrete_fourier_transform.html
 
     Mat complexI = res.at(0);
     Mat magI = res.at(1);
@@ -79,6 +86,7 @@ int findSharpness(vector<Mat> &res){
     normalize(magI, magI, 0, 1, NORM_MINMAX);  // Transform the matrix with float values into a
                                               // viewable image form (float between values 0 and 1)
     // imshow("spectrum magnitude", magI);
+
 //! [threshold]
     threshold(magI,magI, 0.2, 1, THRESH_BINARY);
 
@@ -149,17 +157,24 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     // imshow("view", cv_ptr->image);
     Mat gray, dst, edge, draw;
     dst = cv_ptr->image;
-    // correctIllumination(dst,dst);
-    // imshow("illum",dst);
+
+    // Note, illumination correction could still used some work
+    if (illum_corr){
+      correctIllumination(dst,dst);
+      // imshow("illum",dst);
+    }
     cvtColor(dst, gray, CV_BGR2GRAY);
     vector<Mat> res = fft(gray,gray.rows,gray.cols);
     int sharpness = findSharpness(res);
-    // if (sharpness < 50 && num_rect < 35){
-    //   client.call(srv);
-    //   int winSize = static_cast<int>(srv.response.w);
-    //   Mat sharp_image = deblur(res.at(0),srv.response.w,gray.rows,gray.cols);
-    //   // imshow("deblur",sharp_image);
-    // }
+
+    // Note, deblurring code is not functioning correctly yet
+    if (sharpness < 50 && num_rect < 35 && deblur_corr){
+      client.call(srv);
+      int winSize = static_cast<int>(srv.response.w);
+      Mat sharp_image = deblur(res.at(0),srv.response.w,gray.rows,gray.cols);
+      // imshow("deblur",sharp_image);
+    }
+
     auto start = chrono::high_resolution_clock::now();
     Canny( gray, edge, 50, 150, 3);
     dilate(edge,edge,Mat(),Point(-1,-1));
@@ -214,6 +229,8 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "image_listener");
   ros::NodeHandle nh;
+  ros::param::get("tag_detector/deblur_correction",deblur_corr);
+  ros::param::get("tag_detector/illumination_correction",illum_corr);
   image_transport::ImageTransport it(nh);
   image_transport::Subscriber sub = it.subscribe("image_raw", 1, imageCallback);
   client = nh.serviceClient<tag_detector::WindowSize>("set_blur_window_size");
