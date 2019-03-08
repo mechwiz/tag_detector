@@ -9,13 +9,22 @@
 using namespace cv;
 // static const std::string OPENCV_WINDOW = "Image window";
 static int window_w = 0;
-static int window_h = 0;
 
 bool set_window_size(tag_detector::WindowSize::Request  &req,
                      tag_detector::WindowSize::Response &res)
 {
-  window_w = req.w;
-  window_h = req.h;
+  if (req.w == 0)
+  {
+    if (window_w == 0)
+      return false;
+    res.w = window_w;
+  }else{
+    if (req.w < 1 || req.w % 2 == 0)
+      return false;
+    window_w = req.w;
+    res.w = req.w;
+  }
+
   return true;
 }
 
@@ -31,12 +40,12 @@ int main(int argc, char** argv)
   ROS_INFO("Waiting for GaussianBlur service call...");
   ros::Rate loop_rate(30);
   while (nh.ok()){
-    if (window_w > 0 && window_h > 0 && window_w % 2 == 1 && window_h % 2 == 1)
+    if (window_w > 0)
       break;
     ros::spinOnce();
     loop_rate.sleep();
   }
-  auto kernel = Size(window_w,window_h);
+  auto kernel = Size(window_w,window_w);
 
   const std::string video_source = ros::package::getPath("tag_detector")+"/vid/tag_vid.MOV";
 
@@ -54,8 +63,8 @@ int main(int argc, char** argv)
     if(!frame.empty()) {
       resize(frame, frame, Size(640, 480), 0, 0, CV_INTER_CUBIC);
       Mat blurr;
-      if ((kernel.height != window_h || kernel.width != window_w) && window_h > 0 && window_h % 2 == 1 && window_w > 0 && window_w % 2 == 1){
-        kernel.height = window_h;
+      if (kernel.width != window_w){
+        kernel.height = window_w;
         kernel.width = window_w;
       }
       GaussianBlur(frame,blurr,kernel,0);
